@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>随机学生抽选系统</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f0f8ff;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .input-section {
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #result {
+            font-size: 24px;
+            color: #ff4444;
+            margin: 20px 0;
+            padding: 15px;
+            border: 2px dashed #4CAF50;
+            text-align: center;
+            min-height: 80px;
+            position: relative;
+            overflow: hidden;
+        }
+        .history-item {
+            background-color: #e9f7ef;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+        }
+        .option-section {
+            margin: 15px 0;
+        }
+        input[type="number"] {
+            padding: 8px;
+            width: 60px;
+            margin: 0 10px;
+        }
+        .file-upload {
+            margin: 15px 0;
+        }
+        
+        /* 新增特效样式 */
+        @keyframes highlight {
+            0% { transform: scale(1); box-shadow: 0 0 0 rgba(76, 175, 80, 0.4); }
+            50% { transform: scale(1.05); box-shadow: 0 0 20px rgba(76, 175, 80, 0.8); }
+            100% { transform: scale(1); box-shadow: 0 0 0 rgba(76, 175, 80, 0.4); }
+        }
+        
+        .confetti-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 0;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 50;
+        }
+        
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f44336;
+            opacity: 0.7;
+            animation: confetti-fall 3s ease-in-out forwards;
+        }
+        
+        @keyframes confetti-fall {
+            0% { transform: translateY(-100%) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+        }
+        
+        .selected-student {
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        /* 插件管理样式 */
+        .plugin-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .plugin-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px;
+            margin: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .plugin-item:last-child {
+            border-bottom: none;
+        }
+        
+        .plugin-name {
+            font-weight: bold;
+        }
+        
+        .plugin-status {
+            color: #888;
+            font-size: 0.9em;
+        }
+        
+        .plugin-actions button {
+            padding: 6px 12px;
+            font-size: 0.9em;
+        }
+        
+        .plugin-upload {
+            margin-top: 15px;
+        }
+        
+        .plugin-upload input[type="file"] {
+            display: none;
+        }
+        
+        /* 删除学生样式 */
+        .delete-section {
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        
+        .delete-btn {
+            background-color: #ff4444;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 10px;
+            margin-left: 5px;
+        }
+        
+        .student-item {
+            display: inline-block;
+            margin: 5px;
+            padding: 5px 10px;
+            background-color: #e8f5e9;
+            border-radius: 5px;
+        }
+        
+        /* 设置面板样式 */
+        .settings-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        
+        .settings-section div {
+            margin-bottom: 10px;
+        }
+        
+        .text-sm {
+            font-size: 14px;
+        }
+        
+        .text-gray-500 {
+            color: #666;
+        }
+        
+        /* 滑块样式 */
+        input[type="range"] {
+            width: 200px;
+            margin: 0 10px;
+        }
+        
+        .slider-label {
+            display: inline-block;
+            width: 120px;
+        }
+    </style>
+</head>
+<body>
+    <div class="confetti-container" id="confettiContainer"></div>
+    <div class="container">
+        <h2>随机学生抽选系统</h2>
+        
+        <div class="input-section">
+            <h3>添加学生名单</h3>
+            <textarea id="studentList" placeholder="请输入学生姓名，每行一个"></textarea>
+            <div class="file-upload">
+                <input type="file" id="fileInput" accept=".txt,.csv">
+                <button onclick="document.getElementById('fileInput').click()">上传名单文件</button>
+                （支持.txt或.csv，每行一个姓名）
+            </div>
+            <button onclick="addStudents()">手动添加学生</button>
+            <button onclick="clearList()">清空名单</button>
+            <button onclick="saveListToFile()">保存名单</button>
+        </div>
+
+        <div class="option-section">
+            <label>每次抽取人数：
+                <input type="number" id="drawNumber" value="1" min="1" max="10">
+            </label>
+            <label>
+                <input type="checkbox" id="removeDrawn"> 抽取后移除已选学生
+            </label>
+        </div>
+
+        <!-- 删除学生区域 -->
+        <div class="delete-section">
+            <label>删除学生姓名：
+                <input type="text" id="deleteStudentName" placeholder="输入要删除的学生姓名">
+            </label>
+            <button onclick="deleteStudent()">删除学生</button>
+        </div>
+
+        <button onclick="drawStudent()" style="font-size: 18px;">开始随机抽选</button>
+        
+        <div id="result"></div>
+        
+        <h3>当前名单（共 <span id="count">0</span> 人）</h3>
+        <div id="currentList"></div>
+        
+        <h3>抽取历史</h3>
+        <div id="history"></div>
+        
+        <!-- 插件管理区域 -->
+        <div class="plugin-section">
+            <h3>插件管理</h3>
+            <div id="pluginList"></div>
+            
+            <div class="plugin-upload">
+                <input type="file" id="pluginFileInput" accept=".js">
+                <label for="pluginFileInput" class="button">上传插件</label>
+                <span class="text-sm text-gray-500">（支持.js格式）</span>
+            </div>
+        </div>
+        <a href="shop.html">插件市场</a>
+        
+        <!-- 设置面板（移至页面下方） -->
+        <div class="settings-section">
+            <h3>系统设置</h3>
+            <div>
+                <label>历史记录保留数量：
+                    <input type="number" id="historyLimit" value="20" min="1" max="100">
+                </label>
+                <span class="text-sm text-gray-500">（最多保留100条记录）</span>
+            </div>
+            <div>
+                <label>
+                    <input type="checkbox" id="enableSound"> 启用抽选音效
+                </label>
+            </div>
+            <div>
+                <label>
+                    <input type="checkbox" id="autoSave"> 自动保存名单（每次修改后自动保存）
+                </label>
+            </div>
+            
+            <!-- 新增动画设置 -->
+            <div>
+                <label class="slider-label">动画速度：</label>
+                <input type="range" id="animationSpeed" min="0.5" max="2" step="0.1" value="1">
+                <span id="animationSpeedValue">1.0x</span>
+            </div>
+            <div>
+                <label class="slider-label">彩带数量：</label>
+                <input type="range" id="confettiCount" min="20" max="200" step="10" value="100">
+                <span id="confettiCountValue">100</span>
+            </div>
+            
+            <button onclick="saveSettings()">保存设置</button>
+        </div>
+    </div>
+
+    <script>
+        // 使用localStorage替代cookie存储数据
+        let students = loadData('students') || [];
+        let history = loadData('history') || [];
+        let lastSavedSettings = loadData('settings') || { 
+            drawNumber: 1, 
+            removeDrawn: false,
+            historyLimit: 20,
+            enableSound: false,
+            autoSave: false,
+            animationSpeed: 1,
+            confettiCount: 100
+        };
+        let plugins = loadData('plugins') || [];
+
+        // 数据保存功能 - 使用localStorage
+        function saveData() {
+            localStorage.setItem('students', JSON.stringify(students));
+            localStorage.setItem('history', JSON.stringify(history.slice(0, lastSavedSettings.historyLimit || 20)));
+            localStorage.setItem('settings', JSON.stringify({
+                drawNumber: document.getElementById('drawNumber').value,
+                removeDrawn: document.getElementById('removeDrawn').checked,
+                historyLimit: document.getElementById('historyLimit').value,
+                enableSound: document.getElementById('enableSound').checked,
+                autoSave: document.getElementById('autoSave').checked,
+                animationSpeed: parseFloat(document.getElementById('animationSpeed').value),
+                confettiCount: parseInt(document.getElementById('confettiCount').value)
+            }));
+            localStorage.setItem('plugins', JSON.stringify(plugins));
+        }
+
+        function loadData(name) {
+            try {
+                const data = localStorage.getItem(name);
+                return data ? JSON.parse(data) : null;
+            } catch (error) {
+                console.error(`加载${name}失败:`, error);
+                return null;
+            }
+        }
+
+        // 保存名单到文件
+        function saveListToFile() {
+            if (students.length === 0) {
+                alert('学生名单为空，无法保存！');
+                return;
+            }
+            
+            const content = students.join('\n');
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const a = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            a.href = url;
+            a.download = 'student_list.txt';
+            document.body.appendChild(a);
+            a.click();
+            
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 0);
+        }
+
+        // 添加学生名单
+        function addStudents() {
+            const input = document.getElementById('studentList').value;
+            const newStudents = input.split('\n')
+                .map(s => s.trim())
+                .filter(s => s);
+            students = [...new Set([...students, ...newStudents])];
+            updateDisplay();
+            
+            if (lastSavedSettings.autoSave) {
+                saveData();
+            }
+            
+            // 触发插件事件
+            triggerPluginEvent('onStudentsAdded', newStudents);
+        }
+
+        // 文件上传处理
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function() {
+                const names = this.result.split('\n')
+                    .map(s => s.trim())
+                    .filter(s => s);
+                students = [...new Set([...students, ...names])];
+                updateDisplay();
+                
+                if (lastSavedSettings.autoSave) {
+                    saveData();
+                }
+                
+                // 触发插件事件
+                triggerPluginEvent('onStudentsImported', names);
+            };
+            reader.readAsText(file);
+        });
+
+        // 更新显示
+        function updateDisplay() {
+            // 修改当前名单显示为带删除按钮的列表
+            const currentListEl = document.getElementById('currentList');
+            currentListEl.innerHTML = students.map(student => `
+                <span class="student-item" style="margin-right: 10px;">
+                    ${student}
+                    <button class="delete-btn" onclick="deleteSingleStudent('${student}')">✖</button>
+                </span>
+            `).join('');
+            
+            document.getElementById('count').textContent = students.length;
+            
+            // 更新插件列表显示
+            updatePluginList();
+        }
+
+        // 随机抽选
+        function drawStudent() {
+            if (students.length === 0) {
+                alert('请先添加学生名单！');
+                return;
+            }
+            
+            // 播放音效（如果启用）
+            if (lastSavedSettings.enableSound) {
+                playSound('success.mp3'); // 需添加实际音效文件
+            }
+            
+            // 触发插件事件
+            const beforeDrawResults = triggerPluginEvent('beforeDraw', {
+                students: students,
+                count: parseInt(document.getElementById('drawNumber').value) || 1
+            });
+            
+            // 允许插件修改抽选逻辑
+            let results;
+            if (beforeDrawResults && beforeDrawResults.modifiedResults) {
+                results = beforeDrawResults.modifiedResults;
+            } else {
+                const drawCount = parseInt(document.getElementById('drawNumber').value) || 1;
+                const maxDraw = Math.min(drawCount, students.length);
+                results = [];
+                
+                for (let i = 0; i < maxDraw; i++) {
+                    const index = Math.floor(Math.random() * students.length);
+                    results.push(students[index]);
+                    if (document.getElementById('removeDrawn').checked) {
+                        students.splice(index, 1);
+                    }
+                }
+            }
+            
+            showResult(results);
+            updateDisplay();
+            addToHistory(results);
+            
+            if (lastSavedSettings.autoSave) {
+                saveData();
+            }
+            
+            // 触发插件事件
+            triggerPluginEvent('afterDraw', {
+                results: results,
+                removed: document.getElementById('removeDrawn').checked
+            });
+        }
+
+        // 播放音效函数（需添加实际音效文件）
+        function playSound(url) {
+            try {
+                const audio = new Audio(url);
+                audio.play();
+            } catch (error) {
+                console.error('播放音效失败:', error);
+            }
+        }
+
+        // 显示结果（添加特效）
+        function showResult(results) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '';
+            
+            // 应用动画速度设置
+            const animationSpeed = lastSavedSettings.animationSpeed || 1;
+            document.documentElement.style.setProperty('--pulse-duration', `${1.5 / animationSpeed}s`);
+            document.documentElement.style.setProperty('--highlight-duration', `${1.5 / animationSpeed}s`);
+            
+            // 创建每个学生的元素并添加动画
+            results.forEach((student, index) => {
+                const studentEl = document.createElement('div');
+                studentEl.className = 'selected-student';
+                studentEl.textContent = student;
+                studentEl.style.opacity = '0';
+                studentEl.style.animationDelay = `${index * 0.3 / animationSpeed}s`;
+                resultDiv.appendChild(studentEl);
+                
+                // 淡入动画
+                setTimeout(() => {
+                    studentEl.style.transition = `opacity ${0.5 / animationSpeed}s ease-in-out`;
+                    studentEl.style.opacity = '1';
+                }, 50);
+            });
+            
+            // 添加结果容器动画
+            resultDiv.style.animation = 'none';
+            setTimeout(() => {
+                resultDiv.style.animation = `highlight ${1.5 / animationSpeed}s`;
+            }, 10);
+            
+            // 显示彩带动画
+            createConfetti();
+        }
+
+        // 创建彩带动画
+        function createConfetti() {
+            const container = document.getElementById('confettiContainer');
+            const colors = ['#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#03a9f4', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#cddc39', '#ffeb3b', '#ffc107', '#ff9800', '#ff5722'];
+            
+            // 清除旧的彩带动画
+            container.innerHTML = '';
+            
+            // 应用彩带数量设置
+            const confettiCount = lastSavedSettings.confettiCount || 100;
+            
+            // 创建新的彩带动画
+            for (let i = 0; i < confettiCount; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.left = `${Math.random() * 100}%`;
+                
+                // 应用动画速度设置
+                const animationSpeed = lastSavedSettings.animationSpeed || 1;
+                confetti.style.animationDuration = `${(2 + Math.random() * 3) / animationSpeed}s`;
+                
+                confetti.style.animationDelay = `${Math.random() * 2 / animationSpeed}s`;
+                confetti.style.transform = `translateY(-100%) rotate(${Math.random() * 360}deg)`;
+                container.appendChild(confetti);
+                
+                // 动画结束后移除元素
+                setTimeout(() => {
+                    confetti.remove();
+                }, (5000 / animationSpeed));
+            }
+            
+            // 显示容器
+            container.style.height = '100vh';
+            
+            // 动画结束后隐藏容器
+            setTimeout(() => {
+                container.style.height = '0';
+            }, (5000 / animationSpeed));
+        }
+
+        // 添加到历史记录
+        function addToHistory(results) {
+            const historyLimit = parseInt(document.getElementById('historyLimit').value) || 20;
+            
+            history.unshift({
+                time: new Date().toLocaleString(),
+                results: results,
+                removed: document.getElementById('removeDrawn').checked
+            });
+            
+            // 截断历史记录到指定数量
+            history = history.slice(0, historyLimit);
+            
+            const historyDiv = document.getElementById('history');
+            historyDiv.innerHTML = history.map(item => `
+                <div class="history-item">
+                    [${item.time}] 
+                    抽中：${item.results.join(', ')}
+                    ${item.removed ? '(已移除)' : ''}
+                </div>
+            `).join('');
+        }
+
+        // 清空名单
+        function clearList() {
+            if (confirm('确定要清空名单和历史记录吗？')) {
+                students = [];
+                history = [];
+                updateDisplay();
+                document.getElementById('result').textContent = '';
+                document.getElementById('history').innerHTML = '';
+                
+                if (lastSavedSettings.autoSave) {
+                    saveData();
+                }
+                
+                // 触发插件事件
+                triggerPluginEvent('onClearList');
+            }
+        }
+
+        // 删除学生功能
+        function deleteStudent() {
+            const nameToDelete = document.getElementById('deleteStudentName').value.trim();
+            if (!nameToDelete) {
+                alert('请输入要删除的学生姓名！');
+                return;
+            }
+            
+            const originalLength = students.length;
+            students = students.filter(student => student !== nameToDelete);
+            
+            if (students.length < originalLength) {
+                alert(`已成功删除 ${nameToDelete}！`);
+                updateDisplay();
+                
+                if (lastSavedSettings.autoSave) {
+                    saveData();
+                }
+                
+                // 触发插件事件
+                triggerPluginEvent('onStudentDeleted', { name: nameToDelete });
+            } else {
+                alert(`未找到学生：${nameToDelete}`);
+            }
+            
+            document.getElementById('deleteStudentName').value = '';
+        }
+
+        // 单个学生删除函数
+        function deleteSingleStudent(name) {
+            if (confirm(`确定要删除 ${name} 吗？`)) {
+                students = students.filter(student => student !== name);
+                updateDisplay();
+                
+                if (lastSavedSettings.autoSave) {
+                    saveData();
+                }
+                
+                // 触发插件事件
+                triggerPluginEvent('onStudentDeleted', { name: name });
+            }
+        }
+
+        // 保存设置
+        function saveSettings() {
+            const settings = {
+                drawNumber: document.getElementById('drawNumber').value,
+                removeDrawn: document.getElementById('removeDrawn').checked,
+                historyLimit: parseInt(document.getElementById('historyLimit').value),
+                enableSound: document.getElementById('enableSound').checked,
+                autoSave: document.getElementById('autoSave').checked,
+                animationSpeed: parseFloat(document.getElementById('animationSpeed').value),
+                confettiCount: parseInt(document.getElementById('confettiCount').value)
+            };
+            
+            lastSavedSettings = settings;
+            localStorage.setItem('settings', JSON.stringify(settings));
+            
+            // 更新显示值
+            document.getElementById('animationSpeedValue').textContent = `${settings.animationSpeed.toFixed(1)}x`;
+            document.getElementById('confettiCountValue').textContent = settings.confettiCount;
+            
+            alert('设置已保存！');
+            
+            // 如果启用自动保存，则立即保存数据
+            if (settings.autoSave) {
+                saveData();
+            }
+        }
+
+        // 插件系统
+        function updatePluginList() {
+            const pluginListEl = document.getElementById('pluginList');
+            pluginListEl.innerHTML = '';
+            
+            if (plugins.length === 0) {
+                pluginListEl.innerHTML = '<p class="text-gray-500">暂无插件</p>';
+                return;
+            }
+            
+            plugins.forEach((plugin, index) => {
+                const pluginEl = document.createElement('div');
+                pluginEl.className = 'plugin-item';
+                pluginEl.innerHTML = `
+                    <div>
+                        <div class="plugin-name">${plugin.name || '未命名插件'}</div>
+                        <div class="plugin-status">${plugin.active ? '已启用' : '已禁用'} · ${plugin.version || '未知版本'}</div>
+                    </div>
+                    <div class="plugin-actions">
+                        <button onclick="togglePlugin(${index})">${plugin.active ? '禁用' : '启用'}</button>
+                        <button onclick="removePlugin(${index})">删除</button>
+                    </div>
+                `;
+                pluginListEl.appendChild(pluginEl);
+            });
+        }
+
+        function togglePlugin(index) {
+            if (index >= 0 && index < plugins.length) {
+                plugins[index].active = !plugins[index].active;
+                saveData();
+                updatePluginList();
+                
+                if (plugins[index].active) {
+                    loadPluginCode(plugins[index]);
+                }
+            }
+        }
+
+        function removePlugin(index) {
+            if (index >= 0 && index < plugins.length) {
+                if (confirm(`确定要删除插件 "${plugins[index].name || '未命名插件'}" 吗？`)) {
+                    plugins.splice(index, 1);
+                    saveData();
+                    updatePluginList();
+                }
+            }
+        }
+
+        // 插件文件上传
+        document.getElementById('pluginFileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const pluginCode = e.target.result;
+                    const pluginInfo = extractPluginInfo(pluginCode);
+                    
+                    plugins.push({
+                        name: pluginInfo.name || file.name,
+                        version: pluginInfo.version || '1.0.0',
+                        code: pluginCode,
+                        active: true,
+                        installedAt: new Date().toISOString()
+                    });
+                    
+                    saveData();
+                    updatePluginList();
+                    
+                    // 加载并执行插件代码
+                    loadPluginCode(plugins[plugins.length - 1]);
+                    
+                    alert(`插件 "${pluginInfo.name || file.name}" 安装成功！`);
+                } catch (error) {
+                    console.error('插件安装失败:', error);
+                    alert('插件安装失败: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // 提取插件信息
+        function extractPluginInfo(code) {
+            const info = { name: null, version: null };
+            const nameMatch = code.match(/\/\/\s*@name\s+(.+)/);
+            const versionMatch = code.match(/\/\/\s*@version\s+(.+)/);
+            
+            if (nameMatch && nameMatch[1]) info.name = nameMatch[1].trim();
+            if (versionMatch && versionMatch[1]) info.version = versionMatch[1].trim();
+            
+            return info;
+        }
+
+        // 加载并执行插件代码
+        function loadPluginCode(plugin) {
+            if (!plugin.active || !plugin.code) return;
+            
+            try {
+                // 创建沙箱环境
+                const sandbox = {
+                    // 提供给插件的API
+                    addButton: function(label, callback) {
+                        const button = document.createElement('button');
+                        button.textContent = label;
+                        button.onclick = callback;
+                        document.querySelector('.input-section').appendChild(button);
+                    },
+                    log: function(message) {
+                        console.log(`[Plugin: ${plugin.name}] ${message}`);
+                    },
+                    alert: function(message) {
+                        alert(`[${plugin.name}] ${message}`);
+                    },
+                    // 其他API...
+                };
+                
+                // 使用with语句创建沙箱作用域
+                const pluginFunction = new Function('sandbox', `
+                    const api = sandbox;
+                    ${plugin.code}
+                `);
+                
+                pluginFunction(sandbox);
+                
+                console.log(`插件 "${plugin.name}" 已加载`);
+            } catch (error) {
+                console.error(`插件 "${plugin.name}" 加载失败:`, error);
+                plugin.active = false;
+                saveData();
+                updatePluginList();
+            }
+        }
+
+        // 触发插件事件
+        function triggerPluginEvent(eventName, data = {}) {
+            let results = [];
+            
+            plugins.forEach(plugin => {
+                if (!plugin.active || !plugin.code) return;
+                
+                try {
+                    // 检查插件是否实现了该事件处理函数
+                    if (window[`plugin_${plugin.name}_${eventName}`] instanceof Function) {
+                        const result = window[`plugin_${plugin.name}_${eventName}`](data);
+                        results.push(result);
+                    }
+                } catch (error) {
+                    console.error(`插件 "${plugin.name}" 处理事件 "${eventName}" 失败:`, error);
+                }
+            });
+            
+            // 如果有多个结果，合并它们
+            if (results.length > 0) {
+                return results.reduce((acc, result) => ({ ...acc, ...result }), {});
+            }
+            
+            return null;
+        }
+
+        // 初始化
+        window.onload = function() {
+            updateDisplay();
+            
+            // 加载历史记录
+            if(history.length > 0) {
+                addToHistory([]); // 触发历史记录显示
+            }
+            
+            // 恢复设置
+            document.getElementById('drawNumber').value = lastSavedSettings.drawNumber || 1;
+            document.getElementById('removeDrawn').checked = lastSavedSettings.removeDrawn || false;
+            document.getElementById('historyLimit').value = lastSavedSettings.historyLimit || 20;
+            document.getElementById('enableSound').checked = lastSavedSettings.enableSound || false;
+            document.getElementById('autoSave').checked = lastSavedSettings.autoSave || false;
+            document.getElementById('animationSpeed').value = lastSavedSettings.animationSpeed || 1;
+            document.getElementById('confettiCount').value = lastSavedSettings.confettiCount || 100;
+            
+            // 更新显示值
+            document.getElementById('animationSpeedValue').textContent = `${lastSavedSettings.animationSpeed || 1}x`;
+            document.getElementById('confettiCountValue').textContent = lastSavedSettings.confettiCount || 100;
+            
+            // 添加设置变更监听器
+            document.getElementById('drawNumber').addEventListener('change', saveData);
+            document.getElementById('removeDrawn').addEventListener('change', saveData);
+            document.getElementById('historyLimit').addEventListener('change', saveSettings);
+            document.getElementById('enableSound').addEventListener('change', saveSettings);
+            document.getElementById('autoSave').addEventListener('change', saveSettings);
+            document.getElementById('animationSpeed').addEventListener('input', function() {
+                document.getElementById('animationSpeedValue').textContent = `${this.value}x`;
+            });
+            document.getElementById('confettiCount').addEventListener('input', function() {
+                document.getElementById('confettiCountValue').textContent = this.value;
+            });
+            
+            // 加载并激活所有已安装的插件
+            plugins.forEach(plugin => {
+                if (plugin.active) {
+                    loadPluginCode(plugin);
+                }
+            });
+            
+            // 添加CSS变量
+            const style = document.createElement('style');
+            style.textContent = `
+                :root {
+                    --pulse-duration: 1.5s;
+                    --highlight-duration: 1.5s;
+                }
+                .selected-student {
+                    animation: pulse var(--pulse-duration) infinite;
+                }
+                @keyframes pulse {
+                    0% { transform: scale(1); }
+                    50% { transform: scale(1.1); }
+                    100% { transform: scale(1); }
+                }
+                @keyframes highlight {
+                    0% { transform: scale(1); box-shadow: 0 0 0 rgba(76, 175, 80, 0.4); }
+                    50% { transform: scale(1.05); box-shadow: 0 0 20px rgba(76, 175, 80, 0.8); }
+                    100% { transform: scale(1); box-shadow: 0 0 0 rgba(76, 175, 80, 0.4); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    </script>
+</body>
+</html>    
